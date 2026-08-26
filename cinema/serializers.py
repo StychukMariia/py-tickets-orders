@@ -108,7 +108,7 @@ class TicketSerializer(serializers.ModelSerializer):
     )
 
     def validate(self, attrs):
-        data = super(TicketSerializer, self).validate(attrs)
+        super(TicketSerializer, self).validate(attrs)
         movie_session = attrs.get("movie_session")
         if movie_session:
             hall = movie_session.cinema_hall
@@ -128,7 +128,7 @@ class TicketSerializer(serializers.ModelSerializer):
                 seat=attrs["seat"]
         ).exists():
             raise serializers.ValidationError(
-                f"Seat {attrs['seat']} in row {attrs['row']} is already taken."
+                f"Seat {attrs["seat"]} in row {attrs["row"]} is already taken."
             )
         return attrs
 
@@ -162,7 +162,11 @@ class OrderSerializer(serializers.ModelSerializer):
                     Ticket.objects.create(order=order, **ticket_data)
             except IntegrityError:
                 raise serializers.ValidationError(
-                    {"tickets": "Failed to book tickets due to database constraints."}
+                    {
+                        "tickets":
+                            "Failed to book tickets "
+                            "due to database constraints."
+                    }
                 )
 
             return order
