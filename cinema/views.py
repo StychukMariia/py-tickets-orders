@@ -111,16 +111,11 @@ class MovieSessionViewSet(viewsets.ModelViewSet):
         if self.action in "retrieve":
             queryset = queryset.select_related("movie", "cinema_hall")
         elif self.action in "list":
-            queryset = (
-                queryset
-                .select_related("movie", "cinema_hall")
-                .annotate(
-                    tickets_available=(
-                        F("cinema_hall__rows") * F("cinema_hall__seats_in_row")
-                        - Count("tickets")
-                    )
-                )
-            ).order_by("id")
+            tickets_count = (
+                F("cinema_hall__rows") * F("cinema_hall__seats_in_row")
+                - Count("tickets")
+            )
+            queryset = queryset.annotate(tickets_available=tickets_count)
 
         return queryset.distinct()
 
