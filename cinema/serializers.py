@@ -1,4 +1,4 @@
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from rest_framework import serializers
 
 from cinema.models import (
@@ -122,7 +122,15 @@ class TicketSerializer(serializers.ModelSerializer):
                 hall.rows,
                 serializers.ValidationError
             )
-        return data
+        if Ticket.objects.filter(
+                movie_session=movie_session,
+                row=attrs["row"],
+                seat=attrs["seat"]
+        ).exists():
+            raise serializers.ValidationError(
+                f"Seat {attrs['seat']} in row {attrs['row']} is already taken."
+            )
+        return attrs
 
     class Meta:
         model = Ticket
@@ -146,10 +154,17 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         with transaction.atomic():
-            tickets_date = validated_data.pop("tickets")
-            order = Order.objects.create(**validated_data)
-            for ticket_date in tickets_date:
-                Ticket.objects.create(order=order, **ticket_date)
+            tickets_data = validated_data.pop("tickets")
+            user = self.context["request"].user
+            order = Order.objects.create(user=user, **validated_data)
+            try:
+                for ticket_data in tickets_data:
+                    Ticket.objects.create(order=order, **ticket_data)
+            except IntegrityError:
+                raise serializers.ValidationError(
+                    {"tickets": "Failed to book tickets due to database constraints."}
+                )
+
             return order
 
 
